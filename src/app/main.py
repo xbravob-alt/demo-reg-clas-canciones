@@ -49,13 +49,20 @@ def predecir_filas(modelo: dict, canciones: list[Cancion]) -> list[Prediccion]:
     # 1. Crear el DataFrame a partir de las canciones
     X = pd.DataFrame([c.model_dump() for c in canciones])
     
-    # 2. Garantizar que todas las columnas que espera el modelo existan y mantengan el orden exacto
+    # 2. Garantizar que todas las columnas que espera el modelo existan
     columnas_esperadas = modelo.get("columnas_entrada", [])
     if columnas_esperadas:
         for col in columnas_esperadas:
             if col not in X.columns:
-                X[col] = None
+                X[col] = 0
         X = X[columnas_esperadas]
+
+    # 3. Limpiar cualquier valor NaN restante para evitar fallos en modelos como Ridge
+    for col in X.columns:
+        if X[col].dtype == "object":
+            X[col] = X[col].fillna("")
+        else:
+            X[col] = X[col].fillna(0)
 
     nombre = etiqueta(ficha)
     salida = []
