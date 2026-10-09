@@ -45,7 +45,18 @@ def etiqueta(ficha: dict) -> str:
 
 def predecir_filas(modelo: dict, canciones: list[Cancion]) -> list[Prediccion]:
     ficha, pipeline = modelo["ficha"], modelo["pipeline"]
-    X = pd.DataFrame([c.model_dump() for c in canciones])[modelo["columnas_entrada"]]
+    
+    # 1. Crear el DataFrame a partir de las canciones
+    X = pd.DataFrame([c.model_dump() for c in canciones])
+    
+    # 2. Garantizar que todas las columnas que espera el modelo existan y mantengan el orden exacto
+    columnas_esperadas = modelo.get("columnas_entrada", [])
+    if columnas_esperadas:
+        for col in columnas_esperadas:
+            if col not in X.columns:
+                X[col] = None
+        X = X[columnas_esperadas]
+
     nombre = etiqueta(ficha)
     salida = []
 
