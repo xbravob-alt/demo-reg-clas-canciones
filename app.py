@@ -7,6 +7,24 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # -----------------------------------------------------------------------------
+# Carga del Dataset para Gráficas
+# -----------------------------------------------------------------------------
+@st.cache_data
+def cargar_datos():
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    rutas = [
+        os.path.join(BASE_DIR, "canciones.csv"),
+        os.path.join(BASE_DIR, "models", "canciones.csv"),
+        "canciones.csv",
+        "Semana 9/canciones.csv"
+    ]
+    for r in rutas:
+        if os.path.exists(r):
+            return pd.read_csv(r)
+    return None
+
+df_canciones = cargar_datos()
+# -----------------------------------------------------------------------------
 # Configuración de la Página
 # -----------------------------------------------------------------------------
 st.set_page_config(
@@ -144,35 +162,33 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 # Carga de Recursos (Modelo y Datos)
 # -----------------------------------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RUTA_MODELO = os.path.join(BASE_DIR, "modelo.pkl")
+
 @st.cache_resource
 def cargar_modelo():
-    rutas = [
-        os.path.join("models", "modelo.pkl"),
-        "models/modelo.pkl",
-        "modelo_popularidad.pkl"
-    ]
-    for r in rutas:
-        if os.path.exists(r):
-            obj = joblib.load(r)
-            # Si el artefacto cargado es un diccionario, extraemos el estimador/pipeline
-            if isinstance(obj, dict):
-                if "modelo" in obj:
-                    return obj["modelo"]
-                elif "pipeline" in obj:
-                    return obj["pipeline"]
-            return obj
-    return None
+    if os.path.exists(RUTA_MODELO):
+        return joblib.load(RUTA_MODELO)
+    else:
+        # Si no lo encuentra directo en la carpeta actual, intenta en 'models/modelo.pkl'
+        ruta_models = os.path.join(BASE_DIR, "models", "modelo.pkl")
+        if os.path.exists(ruta_models):
+            return joblib.load(ruta_models)
+        return None
 
-@st.cache_data
-def cargar_datos():
-    rutas = ["canciones.csv", os.path.join("Semana 9", "canciones.csv")]
-    for r in rutas:
-        if os.path.exists(r):
-            return pd.read_csv(r)
-    return None
+# Cargar el artefacto
+artefacto = cargar_modelo()
 
-modelo = cargar_modelo()
-df_canciones = cargar_datos()
+if artefacto is None:
+    st.error("⚠️ No se encontró 'modelo.pkl'. Verifica la presencia del archivo.")
+else:
+    # Si el pkl es un diccionario empaquetado, extraemos el pipeline
+    if isinstance(artefacto, dict):
+        modelo = artefacto.get("pipeline")
+        ficha = artefacto.get("ficha", {})
+        columnas_entrada = artefacto.get("columnas_entrada", [])
+    else:
+        modelo = artefacto
 
 # -----------------------------------------------------------------------------
 # Banner Superior
