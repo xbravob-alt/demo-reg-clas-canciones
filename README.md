@@ -1,8 +1,9 @@
+
 <div align="center">
 
 # Predicción de popularidad de canciones
 
-Repositorio base del taller en dos sprints: regresión lineal y clasificación binaria
+Repositorio base del taller en dos sprints: regresión y clasificación binaria.
 
 [![Python](https://img.shields.io/badge/Python-3.11%20a%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -13,187 +14,161 @@ Repositorio base del taller en dos sprints: regresión lineal y clasificación b
 
 ---
 
-Una disquera debe decidir, antes del lanzamiento, en qué canciones invertir promoción. Este repositorio contiene un servicio de predicción listo para publicar y el código con el que se entrenaron los modelos de referencia de los dos sprints del taller.
+Una disquera debe decidir, antes del lanzamiento, en qué canciones invertir promoción. Este proyecto desarrolla un servicio de predicción mediante Machine Learning, Python y FastAPI, desplegado en Render.
 
-El servicio lee un único archivo, `models/modelo.pkl`, con el modelo entrenado y su ficha. En cada sprint usted reemplaza ese archivo por el de su propio modelo y publica el servicio en Render. El código del servicio no se toca, porque todo lo que necesita para responder está en la ficha.
+El servicio utiliza un único artefacto, `models/modelo.pkl`, que contiene el modelo entrenado y su ficha de información. En cada sprint se reemplaza este archivo por el modelo correspondiente, sin modificar el código de la API.
 
 ## Los dos sprints
 
-Cada sprint cierra con un incremento en producción: su servicio publicado en Render con un modelo propio.
-
-| | Sprint 1: regresión lineal | Sprint 2: clasificación binaria |
+| Característica | Sprint 1: regresión | Sprint 2: clasificación |
 |---|---|---|
-| Objetivo del sprint | Estimar la popularidad de una canción nueva y recomendar si se promociona | Decidir la promoción según lo que cuesta equivocarse |
-| Pregunta | ¿Qué popularidad alcanzará la canción? | ¿La canción será un hit? |
-| Objetivo del modelo | `popularidad` (0 a 100) | `es_hit` (1 si la popularidad llega a 70) |
+| Objetivo | Estimar la popularidad de una canción | Predecir si será un hit |
+| Variable objetivo | `popularidad` (0–100) | `es_hit` (1 si popularidad ≥ 70) |
 | Variables excluidas | `reproducciones_sem1`, `es_hit` | `reproducciones_sem1`, `popularidad` |
 | Modelo de referencia | Regresión lineal con duración² | Regresión logística |
-| Resultado de referencia (2020-2025) | MAE 5,75; la línea base obtiene 10,44 | Costo 99; la línea base obtiene 318 |
-| Regla de decisión | Promocionar si la popularidad esperada supera 65 | Promocionar si la probabilidad de hit supera 0,27 |
-| Código de entrenamiento | `src/entrenar_regresion.py` | `src/entrenar_clasificacion.py` |
+| Métrica principal | MAE | Costo de clasificación |
+| Línea base de referencia | MAE 10,44 | Costo 318 |
+| Resultado de referencia | MAE 5,75 | Costo 99 |
+| Decisión | Promocionar si popularidad esperada > 65 | Promocionar si probabilidad de hit > 0,27 |
 
-El sprint 1 está disponible y el repositorio trae su modelo de referencia en `models/modelo.pkl`. El sprint 2 usa el mismo servicio con otro archivo de modelo. En ambos se entrena con las canciones de 1995 a 2019 y se evalúa con las de 2020 a 2025.
+Ambos modelos se entrenan con canciones de 1995 a 2019 y se evalúan con datos de 2020 a 2025. Las variables excluidas corresponden a información que no estaría disponible al momento de decidir la promoción o que revelaría directamente el objetivo.
 
-## Cómo trabajar cada sprint
+## Resultados obtenidos
 
-1. Clone el repositorio e instale las dependencias, como se explica en [Ejecución local](#ejecución-local).
-2. Entrene su modelo y guárdelo en `models/modelo.pkl` con su ficha.
-3. Compruebe con `pytest -q` que el servicio lo carga y responde.
-4. Suba el cambio a su repositorio en GitHub y publique el servicio en Render.
-5. Revise la definición de terminado y entregue la URL del servicio.
+### Sprint 1: regresión
 
-En el sprint 2 se repiten los pasos 2 a 5 con el clasificador. La URL no cambia.
+Se desarrolló y desplegó un modelo propio basado en `HistGradientBoostingRegressor`, incorporando características derivadas para mejorar la predicción de popularidad.
 
-### Definición de terminado
+| Métrica | Resultado |
+|---|---:|
+| Modelo | HistGradientBoosting + características derivadas |
+| Periodo de entrenamiento | 1995–2019 |
+| Periodo de evaluación | 2020–2025 |
+| Registros de prueba | 415 |
+| MAE del modelo | 6,61 |
+| MAE de la línea base | 10,44 |
+| RMSE | 8,35 |
+| R² | 0,616 |
+| Sesgo medio | 1,76 |
 
-- [ ] `pytest -q` pasa con su `models/modelo.pkl`.
-- [ ] La ficha (`GET /modelo`) reporta las métricas de su propia evaluación sobre 2020-2025, y su modelo supera la línea base.
-- [ ] El servicio está publicado en Render con su modelo.
-- [ ] `python -m src.probar_servicio SU_URL` termina con "servicio en orden". Con esta prueba se califica.
+El modelo obtuvo un MAE de 6,61, inferior al 10,44 de la línea base, lo que representa una reducción aproximada del 36,7 % en el error absoluto medio. El coeficiente R² de 0,616 indica que el modelo explica una parte importante de la variabilidad de la popularidad en el conjunto evaluado.
 
-## Crear su modelo
+La regla de decisión establece recomendar la promoción cuando la popularidad esperada supera los 65 puntos.
 
-La forma más directa es editar `construir_pipeline()` y `NOMBRE` en el script del sprint y ejecutarlo. El script se encarga del resto y deja el archivo en `models/modelo.pkl`.
+**Servicio desplegado:** https://demo-reg-clas-canciones-ctmb.onrender.com
 
-```bash
-python -m src.entrenar_regresion       # sprint 1
-python -m src.entrenar_clasificacion   # sprint 2
-```
+- Documentación interactiva: [/docs](https://demo-reg-clas-canciones-ctmb.onrender.com/docs)
+- Estado del servicio: [/salud](https://demo-reg-clas-canciones-ctmb.onrender.com/salud)
+- Ficha y métricas del modelo: [/modelo](https://demo-reg-clas-canciones-ctmb.onrender.com/modelo)
 
-Si prefiere trabajar en su notebook, importe las funciones del repositorio para que el servicio pueda cargar lo que usted guarde:
+La prueba del servicio confirmó que el modelo se carga correctamente, produce predicciones, aplica el umbral de promoción y rechaza variables posteriores al lanzamiento. El resultado de la prueba de humo fue `servicio en orden`.
 
-```python
-import sys
-sys.path.append("ruta/a/demo-reg-clas-canciones")
+### Sprint 2: clasificación binaria
 
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import FunctionTransformer
-from src.variables import COLUMNAS_ENTRADA, derivadas, preprocesamiento
-from src.artefacto import guardar
+El segundo sprint reemplaza el modelo de regresión por un clasificador que estima la probabilidad de que una canción sea un hit. La selección del umbral considera el costo de los falsos negativos y falsos positivos.
 
-mi_pipeline = make_pipeline(FunctionTransformer(derivadas), preprocesamiento(), MiEstimador())
-mi_pipeline.fit(X_entrenamiento[COLUMNAS_ENTRADA], y_entrenamiento)
+Los resultados de referencia del taller son un costo de 99 frente a 318 de la línea base. El desempeño del modelo propio debe documentarse después de entrenarlo y desplegarlo, consultando las métricas de `GET /modelo`.
 
-guardar(mi_pipeline, mi_ficha, "ruta/a/demo-reg-clas-canciones/models/modelo.pkl")
-```
+> Nota: los resultados de referencia del taller y los obtenidos con el modelo propio son diferentes y deben reportarse por separado. Los datos utilizados son sintéticos y sus resultados no constituyen evidencia causal sobre el éxito musical real.
 
-Antes de escribir el archivo, `guardar()` revisa la ficha y prueba el pipeline. Si falta algo, el mensaje de error lo indica.
+## Cómo ejecutar el proyecto
 
-### Requisitos del archivo
-
-El pipeline recibe las 10 columnas crudas de `COLUMNAS_ENTRADA` (`src/variables.py`) y hace dentro todo el preprocesamiento. Una variable derivada nueva se agrega en `derivadas()` de `src/variables.py`, no en el notebook; de lo contrario el servicio no la encuentra al cargar el archivo.
-
-La ficha debe tener `nombre`, `tarea` (`"regresion"` o `"clasificacion"`), `objetivo`, `momento_prediccion`, `variables_excluidas`, `linea_base`, `desempeno` y `decision`. En regresión, `desempeno` lleva `mae` y `decision` lleva `corte_promocion`. En clasificación, `decision` lleva `umbral` y el modelo debe tener `predict_proba`. Los scripts de `src/` traen una ficha completa de cada tipo.
-
-Entrene con las versiones de `requirements.txt`, porque un `.pkl` creado con otra versión de scikit-learn puede no cargar en Render. Si trabaja en Google Colab, clone el repositorio e instale esas versiones en la primera celda:
-
-```python
-!git clone https://github.com/ebuitrago/demo-reg-clas-canciones.git
-%pip install -q -r demo-reg-clas-canciones/requirements.txt
-```
-
-Luego reinicie la sesión (menú Entorno de ejecución > Reiniciar sesión) para que Colab use las versiones instaladas. En Colab la ruta del repositorio es `/content/demo-reg-clas-canciones`.
-
-El archivo debe pesar menos de 20 MB. Un Random Forest sin límite de profundidad puede pasarse.
-
-## API
-
-| Método | Ruta | Respuesta |
-|--------|------|-----------|
-| `GET` | `/docs` | Documentación interactiva, donde se pueden probar todas las rutas |
-| `GET` | `/salud` | Estado del servicio y modelo cargado |
-| `GET` | `/modelo` | Ficha del modelo |
-| `POST` | `/predecir` | Predicción y decisión para una canción |
-| `POST` | `/predecir_lote` | Lo mismo para hasta 1.000 canciones |
-
-Ejemplo de entrada para `/predecir`:
-
-```json
-{"bailabilidad": 0.72, "energia": 0.65, "valencia": 0.55, "acustica": 0.12, "tempo": 118,
- "duracion_min": 3.4, "volumen_db": -6.5, "anio": 2026, "colaboracion": 1, "genero": "urbano"}
-```
-
-Respuesta con el modelo del sprint 1:
-
-```json
-{"tarea": "regresion", "modelo": "lineal + duración² (2026-09-27)",
- "popularidad_esperada": 84.8, "rango": [79.1, 90.6], "corte_promocion": 65.0,
- "probabilidad_hit": null, "umbral": null,
- "promocionar": true, "explicacion": "popularidad esperada 84.8 (±5.75) supera el corte 65"}
-```
-
-Con el modelo del sprint 2, la misma entrada trae valores en `probabilidad_hit` y `umbral`, y `popularidad_esperada`, `rango` y `corte_promocion` llegan en `null`. Si la entrada trae un campo que no existe antes del lanzamiento, como `reproducciones_sem1`, el servicio responde `422`.
-
-## Estructura
-
-```
-demo-reg-clas-canciones/
-├── data/canciones.csv              # 2.000 canciones sintéticas, 1995-2025
-├── models/modelo.pkl               # El archivo que usted reemplaza en cada sprint
-├── src/
-│   ├── variables.py                # Columnas de entrada, variables derivadas y partición temporal
-│   ├── artefacto.py                # guardar() y cargar() del modelo
-│   ├── entrenar_regresion.py       # Sprint 1
-│   ├── entrenar_clasificacion.py   # Sprint 2
-│   ├── probar_servicio.py          # Prueba de humo contra el servicio publicado
-│   └── app/
-│       ├── esquemas.py             # Formato de entrada y salida
-│       └── main.py                 # Servicio FastAPI
-├── tests/test_servicio.py          # Pruebas
-├── requirements.txt                # Dependencias con versiones fijas
-└── render.yaml                     # Configuración para Render (Python 3.11)
-```
-
-## Ejecución local
-
-Necesita Python 3.11, 3.12 o 3.13. **No use Python 3.14 ni 3.10 o anteriores**: con esas versiones la instalación falla. Compruebe su versión con `python --version`; en Windows, `py --list` muestra las versiones instaladas. Si solo tiene 3.14, instale también la 3.13 desde <https://www.python.org/downloads/> y cree el entorno con ella.
+Se requiere Python 3.11, 3.12 o 3.13.
 
 ```bash
 git clone https://github.com/ebuitrago/demo-reg-clas-canciones.git
 cd demo-reg-clas-canciones
-python -m venv .venv                 # Windows, eligiendo versión: py -3.13 -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
 
-pytest -q                            # comprueba que models/modelo.pkl carga y responde
-uvicorn src.app.main:app --reload    # http://127.0.0.1:8000/docs
+python -m venv .venv
+# Windows: py -3.13 -m venv .venv
+# Activación en Windows: .venv\Scripts\activate
+# Activación en Linux/macOS: source .venv/bin/activate
+
+pip install -r requirements.txt
+pytest -q
+uvicorn src.app.main:app --reload
 ```
 
-Con el servicio arriba, en otra terminal:
+Para entrenar cada modelo:
 
 ```bash
-python -m src.probar_servicio
+python -m src.entrenar_regresion
+python -m src.entrenar_clasificacion
 ```
 
-## Publicar en Render
+Cada script genera `models/modelo.pkl`. Entrene el modelo correspondiente al sprint que vaya a entregar.
 
-Render tiene un plan gratuito que no pide tarjeta de crédito.
+## API disponible
 
-1. Cree en su cuenta de GitHub un repositorio propio con este contenido y su `models/modelo.pkl`. Puede usar **Fork** o crear un repositorio nuevo y subir los archivos.
-2. Entre a <https://render.com> con su cuenta de GitHub.
-3. En el panel elija **New +**, luego **Blueprint**, seleccione su repositorio y confirme con **Apply**. Render lee `render.yaml` y tarda entre 3 y 5 minutos en construir el servicio.
-4. Copie la URL que asigna Render y compruébela:
+| Método | Ruta | Función |
+|---|---|---|
+| GET | `/docs` | Documentación interactiva |
+| GET | `/salud` | Estado del servicio y del modelo |
+| GET | `/modelo` | Ficha técnica y métricas |
+| POST | `/predecir` | Predicción individual |
+| POST | `/predecir_lote` | Predicción de hasta 1.000 canciones |
 
-   ```bash
-   python -m src.probar_servicio https://su-servicio.onrender.com
-   ```
+Ejemplo de entrada:
 
-Render vuelve a publicar el servicio cada vez que usted sube un cambio a GitHub. Para el sprint 2 basta con subir el nuevo `models/modelo.pkl`.
+```json
+{
+  "bailabilidad": 0.72,
+  "energia": 0.65,
+  "valencia": 0.55,
+  "acustica": 0.12,
+  "tempo": 118,
+  "duracion_min": 3.4,
+  "volumen_db": -6.5,
+  "anio": 2026,
+  "colaboracion": 1,
+  "genero": "urbano"
+}
+```
 
-En el plan gratuito el servicio se suspende tras 15 minutos sin uso, y la primera petición después de eso tarda cerca de un minuto. La prueba de humo espera hasta 90 segundos.
+El servicio responde con la predicción y la decisión correspondiente al tipo de modelo cargado. Si se envían variables que no están disponibles antes del lanzamiento, como `reproducciones_sem1`, la API rechaza la entrada.
 
-## Problemas frecuentes
+## Despliegue en Render
 
-| Síntoma | Qué hacer |
-|---|---|
-| `pip install` falla con "No matching distribution found" | Su versión de Python no es compatible. Cree el entorno con Python 3.11, 3.12 o 3.13 |
-| En Windows, PowerShell no deja ejecutar `activate` | Ejecute una vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` y vuelva a intentar |
-| Aviso de que el modelo se creó con otra versión de scikit-learn | Reentrene con las versiones de `requirements.txt` |
-| `503` en `/modelo` o `/predecir` | Falta `models/modelo.pkl` en el repositorio |
-| `422` en `/predecir` | La entrada no cumple el formato de `src/app/esquemas.py`; el detalle de la respuesta indica el campo |
-| `AttributeError` al cargar el modelo | El pipeline usa una función que no está en `src/variables.py`. Muévala allí y reentrene |
-| `ModuleNotFoundError: No module named 'src'` | Ejecute los comandos desde la raíz del repositorio |
-| La primera petición a Render tarda o falla | El servicio estaba suspendido. Repita en un minuto |
+1. Sube el proyecto y `models/modelo.pkl` a un repositorio propio de GitHub.
+2. En Render, selecciona **New + → Blueprint** y conecta el repositorio que contiene `render.yaml`.
+3. Espera a que finalice el despliegue y copia la URL pública asignada.
+4. Comprueba el servicio:
+
+```bash
+python -m src.probar_servicio https://su-servicio.onrender.com
+```
+
+La entrega se considera terminada cuando `pytest -q` pasa, la ficha presenta las métricas del modelo propio y este supera la línea base, el servicio está desplegado y la prueba de humo termina con `servicio en orden`.
+
+En el plan gratuito de Render, el servicio puede suspenderse tras un periodo de inactividad; la primera petición posterior puede tardar más de lo habitual.
+
+## Estructura del proyecto
+
+```text
+demo-reg-clas-canciones/
+├── data/canciones.csv
+├── models/modelo.pkl
+├── src/
+│   ├── variables.py
+│   ├── artefacto.py
+│   ├── entrenar_regresion.py
+│   ├── entrenar_clasificacion.py
+│   ├── probar_servicio.py
+│   └── app/
+│       ├── esquemas.py
+│       └── main.py
+├── tests/test_servicio.py
+├── requirements.txt
+└── render.yaml
+```
+
+## Tecnologías utilizadas
+
+- **Python:** procesamiento de datos y entrenamiento de modelos.
+- **scikit-learn:** construcción, entrenamiento y evaluación de los modelos.
+- **FastAPI:** exposición de predicciones mediante una API REST.
+- **Render:** despliegue del servicio en la nube.
+- **pytest:** pruebas automatizadas del servicio.
 
 ---
 
