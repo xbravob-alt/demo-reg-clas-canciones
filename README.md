@@ -35,8 +35,6 @@ Ambos modelos se entrenan con canciones de 1995 a 2019 y se evalúan con datos d
 
 ## Resultados obtenidos
 
-### Sprint 1: regresión
-
 Se desarrolló y desplegó un modelo propio basado en `HistGradientBoostingRegressor`, incorporando características derivadas para mejorar la predicción de popularidad.
 
 | Métrica | Resultado |
@@ -63,13 +61,9 @@ La regla de decisión establece recomendar la promoción cuando la popularidad e
 
 La prueba del servicio confirmó que el modelo se carga correctamente, produce predicciones, aplica el umbral de promoción y rechaza variables posteriores al lanzamiento. El resultado de la prueba de humo fue `servicio en orden`.
 
-### Sprint 2: clasificación binaria
-
 El segundo sprint reemplaza el modelo de regresión por un clasificador que estima la probabilidad de que una canción sea un hit. La selección del umbral considera el costo de los falsos negativos y falsos positivos.
 
-Los resultados de referencia del taller son un costo de 99 frente a 318 de la línea base. El desempeño del modelo propio debe documentarse después de entrenarlo y desplegarlo, consultando las métricas de `GET /modelo`.
-
-> Nota: los resultados de referencia del taller y los obtenidos con el modelo propio son diferentes y deben reportarse por separado. Los datos utilizados son sintéticos y sus resultados no constituyen evidencia causal sobre el éxito musical real.
+Los resultados de referencia del taller son un costo de 99 frente a 318 de la línea base.
 
 ## Cómo ejecutar el proyecto
 
