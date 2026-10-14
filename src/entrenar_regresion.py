@@ -1,16 +1,14 @@
 """Sprint 1, regresión: entrena el modelo de popularidad y escribe models/modelo.pkl.
 
-Regresión lineal sobre las variables disponibles antes del lanzamiento, más duración al
+Regresión sobre las variables disponibles antes del lanzamiento, más duración al
 cuadrado, entrenada con las canciones de 1995 a 2019 y evaluada con las de 2020 a 2025.
 
     python -m src.entrenar_regresion
-
-Para usar su propio modelo, cambie `construir_pipeline`, `NOMBRE` y, si lo decide, `CORTE_PROMOCION`.
 """
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer
@@ -25,7 +23,7 @@ from src.variables import (
     resumen_periodo,
 )
 
-NOMBRE = "lineal + duración²"
+NOMBRE = "HistGradientBoosting + Características Derivadas"
 CORTE_PROMOCION = 65  # popularidad esperada a partir de la cual se recomienda promocionar
 VARIABLES_EXCLUIDAS = {
     "reproducciones_sem1": "ocurre después del lanzamiento: no existe en el momento de decidir",
@@ -33,9 +31,18 @@ VARIABLES_EXCLUIDAS = {
 }
 
 
+def recortar_predicciones(X):
+    """Garantiza que las predicciones se mantengan dentro del rango válido [0, 100]."""
+    return np.clip(X, 0, 100)
+
+
 def construir_pipeline():
     """Debe recibir las COLUMNAS_ENTRADA crudas: el preprocesamiento va dentro del pipeline."""
-    return make_pipeline(FunctionTransformer(derivadas), preprocesamiento(), LinearRegression())
+    return make_pipeline(
+        FunctionTransformer(derivadas),
+        preprocesamiento(),
+        HistGradientBoostingRegressor(max_iter=100, random_state=42, min_samples_leaf=15)
+    )
 
 
 def entrenar() -> dict:
@@ -44,7 +51,10 @@ def entrenar() -> dict:
     X, y = datos[COLUMNAS_ENTRADA], datos["popularidad"]
 
     pipeline = construir_pipeline().fit(X[entrenamiento], y[entrenamiento])
-    pred = pipeline.predict(X[prueba])
+    
+    # Predicciones con recorte explícito entre 0 y 100
+    pred_raw = pipeline.predict(X[prueba])
+    pred = np.clip(pred_raw, 0, 100)
     residuo = y[prueba] - pred
 
     # Línea base: media por género calculada solo con el periodo de entrenamiento.
