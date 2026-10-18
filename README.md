@@ -74,6 +74,7 @@ Como referencia, con probabilidades perfectamente calibradas y costos 1 y 3, el 
 
 ## Desempeño en la prueba temporal (2020–2025)
 | Métrica	| Línea base (nunca promocionar) |	Modelo Sprint 2|
+|---|---|---|
 | Costo financiero total|	318 |	107 |
 |Sensibilidad (recall) |	0,0 %  |	86,8 % |
 | Precisión comercial |	No aplica |	58,6 % |
@@ -82,6 +83,7 @@ Como referencia, con probabilidades perfectamente calibradas y costos 1 y 3, el 
 El modelo reduce el costo total en un 66,3 % y capta 92 de los 106 éxitos reales.
 
 |	| Se promociona	| No se promociona |
+|---|---|---|
 | Fue hit	| TP = 92	| FN = 14 (costo 14 × 3 = 42)|
 | No fue hit |	FP = 65 (costo 65 × 1 = 65)	| TN = 244|
 
