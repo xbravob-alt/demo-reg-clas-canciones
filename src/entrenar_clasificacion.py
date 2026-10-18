@@ -5,12 +5,10 @@ se elige minimizando el costo de los errores con probabilidades fuera de muestra
 periodo de entrenamiento, de modo que 2020-2025 no interviene en ninguna decisión.
 
     python -m src.entrenar_clasificacion
-
-Para usar su propio modelo, cambie `construir_pipeline`, `NOMBRE` y, si lo decide, los costos.
 """
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import make_pipeline
@@ -26,7 +24,7 @@ from src.variables import (
     resumen_periodo,
 )
 
-NOMBRE = "logística + umbral por costos"
+NOMBRE = "HistGradientBoosting + Umbral de Costos Mínimos"
 COSTO_FALSO_NEGATIVO = 3  # dejar sin promoción una canción que sí fue hit
 COSTO_FALSO_POSITIVO = 1  # promocionar una canción que no fue hit
 VARIABLES_EXCLUIDAS = {
@@ -37,7 +35,16 @@ VARIABLES_EXCLUIDAS = {
 
 def construir_pipeline():
     """Debe recibir las COLUMNAS_ENTRADA crudas y tener predict_proba."""
-    return make_pipeline(FunctionTransformer(derivadas), preprocesamiento(), LogisticRegression(max_iter=1000))
+    return make_pipeline(
+        FunctionTransformer(derivadas),
+        preprocesamiento(),
+        HistGradientBoostingClassifier(
+            max_iter=100,
+            learning_rate=0.05,
+            max_depth=5,
+            random_state=42,
+        ),
+    )
 
 
 def costo(real, pred) -> int:
@@ -67,6 +74,8 @@ def entrenar() -> dict:
 
     umbral = elegir_umbral(X[entrenamiento], y[entrenamiento])
     pipeline = construir_pipeline().fit(X[entrenamiento], y[entrenamiento])
+    
+    # Inferencia de probabilidades y aplicación del umbral optimizado
     pred = pipeline.predict_proba(X[prueba])[:, 1] >= umbral
     real = y[prueba].to_numpy()
     tn, fp, fn, tp = confusion_matrix(real, pred).ravel()
@@ -85,8 +94,8 @@ def entrenar() -> dict:
             "costo": costo(real, np.zeros_like(pred)),
         },
         "desempeno": {
-            "precision": round(float(precision_score(real, pred)), 3),
-            "recall": round(float(recall_score(real, pred)), 3),
+            "precision": round(float(precision_score(real, pred, zero_division=0)), 3),
+            "recall": round(float(recall_score(real, pred, zero_division=0)), 3),
             "matriz_confusion": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)},
             "costo": costo(real, pred),
         },
@@ -96,7 +105,7 @@ def entrenar() -> dict:
             "regla": "promocionar si la probabilidad de hit supera el umbral",
             "nota": "los costos los fija quien responde por el presupuesto, no el modelo",
         },
-        "limites": "probabilidades sin calibrar; describe asociaciones en datos sintéticos",
+        "limites": "describe asociaciones en datos sintéticos",
     }
     return guardar(pipeline, ficha)
 

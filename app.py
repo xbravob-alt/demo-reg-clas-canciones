@@ -1,10 +1,10 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
 import os
+import joblib
+import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 
 # -----------------------------------------------------------------------------
 # Carga del Dataset para Gráficas
@@ -24,6 +24,7 @@ def cargar_datos():
     return None
 
 df_canciones = cargar_datos()
+
 # -----------------------------------------------------------------------------
 # Configuración de la Página
 # -----------------------------------------------------------------------------
@@ -35,18 +36,16 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# Estilos CSS Personalizados (Diseño Neón / Morado - Fucsia Coral)
+# Estilos CSS Personalizados
 # -----------------------------------------------------------------------------
 st.markdown("""
 <style>
-    /* Fondo principal */
     .stApp {
         background-color: #12011b;
         color: #ffffff;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* Forzar visibilidad y legibilidad de textos */
     p, span, label, div, small, li, .stMarkdown {
         color: #f3e8ff !important;
     }
@@ -56,7 +55,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* Banner Superior */
     .header-banner {
         background: linear-gradient(90deg, #1f012e 0%, #320346 100%);
         padding: 16px 28px;
@@ -73,8 +71,16 @@ st.markdown("""
         margin: 0;
     }
 
-    /* Tarjeta de Predicción */
-    .prediction-card {
+    .prediction-card-hit {
+        background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+        padding: 24px;
+        border-radius: 16px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0, 176, 155, 0.35);
+        margin-top: 10px;
+    }
+
+    .prediction-card-nohit {
         background: linear-gradient(135deg, #ff007a 0%, #ff5e36 50%, #ff9e00 100%);
         padding: 24px;
         border-radius: 16px;
@@ -82,6 +88,7 @@ st.markdown("""
         box-shadow: 0 10px 25px rgba(255, 0, 122, 0.35);
         margin-top: 10px;
     }
+
     .prediction-title {
         font-size: 13px;
         font-weight: 800;
@@ -104,7 +111,6 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* Tarjetas de Contenido */
     .studio-card {
         background-color: #1e032b;
         border: 1px solid #ff007a;
@@ -121,7 +127,6 @@ st.markdown("""
         padding-bottom: 8px;
     }
 
-    /* FIX COMPLETO PARA SELECTBOX / MENÚS DESPLEGABLES */
     div[data-baseweb="select"] > div {
         background-color: #250338 !important;
         border-color: #ff007a !important;
@@ -145,7 +150,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Inputs y Sliders */
     .stTextInput input, .stNumberInput input {
         background-color: #250338 !important;
         color: #ffffff !important;
@@ -160,35 +164,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# Carga de Recursos (Modelo y Datos)
+# Carga de Recursos (Modelo y Ficha)
 # -----------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RUTA_MODELO = os.path.join(BASE_DIR, "modelo.pkl")
 
 @st.cache_resource
 def cargar_modelo():
-    if os.path.exists(RUTA_MODELO):
-        return joblib.load(RUTA_MODELO)
-    else:
-        # Si no lo encuentra directo en la carpeta actual, intenta en 'models/modelo.pkl'
-        ruta_models = os.path.join(BASE_DIR, "models", "modelo.pkl")
-        if os.path.exists(ruta_models):
-            return joblib.load(ruta_models)
-        return None
+    rutas = [
+        os.path.join(BASE_DIR, "modelo.pkl"),
+        os.path.join(BASE_DIR, "models", "modelo.pkl")
+    ]
+    for r in rutas:
+        if os.path.exists(r):
+            return joblib.load(r)
+    return None
 
-# Cargar el artefacto
 artefacto = cargar_modelo()
 
 if artefacto is None:
     st.error("⚠️ No se encontró 'modelo.pkl'. Verifica la presencia del archivo.")
-else:
-    # Si el pkl es un diccionario empaquetado, extraemos el pipeline
-    if isinstance(artefacto, dict):
-        modelo = artefacto.get("pipeline")
-        ficha = artefacto.get("ficha", {})
-        columnas_entrada = artefacto.get("columnas_entrada", [])
-    else:
-        modelo = artefacto
+    st.stop()
+
+modelo = artefacto.get("pipeline") if isinstance(artefacto, dict) else artefacto
+ficha = artefacto.get("ficha", {}) if isinstance(artefacto, dict) else {}
+tarea = ficha.get("tarea", "clasificacion")
+decision_info = ficha.get("decision", {})
+umbral_corte = decision_info.get("umbral", decision_info.get("corte_promocion", 0.15))
 
 # -----------------------------------------------------------------------------
 # Banner Superior
@@ -199,12 +200,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-if modelo is None:
-    st.error("⚠️ No se encontró 'modelo_popularidad.pkl'. Verifica la presencia del archivo.")
-    st.stop()
-
 # -----------------------------------------------------------------------------
-# Controles de Entrada (Generación Reactiva en Tiempo Real)
+# Controles de Entrada
 # -----------------------------------------------------------------------------
 col_meta, col_audio1, col_audio2, col_audio3 = st.columns([1.2, 1, 1, 1])
 
@@ -213,7 +210,7 @@ with col_meta:
     titulo_input = st.text_input("Nombre de la Canción", value="Midnight Pulse")
     anio_input = st.number_input("Año de Lanzamiento", min_value=1950, max_value=2030, value=2023)
     
-    generos = ["hip-hop", "pop", "rock", "reggaeton", "latin", "indie", "electronic", "jazz", "metal", "classical"]
+    generos = ["pop", "urbano", "rock", "electronica", "indie"]
     genero_input = st.selectbox("Género Musical", options=generos, index=0)
     colab_input = 0
 
@@ -224,19 +221,15 @@ with col_audio1:
 
 with col_audio2:
     bailabilidad = st.slider("Bailabilidad", 0.0, 1.0, 0.75, 0.01)
-    instrumentalidad = 0.05  # atributo reservado para la interfaz
     duracion_min = st.number_input("Duración (minutos)", min_value=1.0, max_value=10.0, value=3.50, step=0.1)
 
 with col_audio3:
-    liveness = 0.15
-    speechiness = 0.10
     tempo = 120.0
     volumen_db = st.slider("Volumen (dB)", -30.0, 0.0, -6.0, 0.5)
 
 # -----------------------------------------------------------------------------
-# Inferencia del Modelo ML en Tiempo Real
+# Inferencia del Modelo ML
 # -----------------------------------------------------------------------------
-duracion_c2 = (duracion_min - 3.5) ** 2
 datos_entrada = pd.DataFrame([{
     'bailabilidad': bailabilidad,
     'energia': energia,
@@ -244,15 +237,23 @@ datos_entrada = pd.DataFrame([{
     'acustica': acustica,
     'tempo': tempo,
     'duracion_min': duracion_min,
-    'duracion_c2': duracion_c2,
     'volumen_db': volumen_db,
     'anio': anio_input,
     'colaboracion': colab_input,
     'genero': genero_input
 }])
 
-prediccion_raw = modelo.predict(datos_entrada)[0]
-pred_clamped = round(float(np.clip(prediccion_raw, 0, 100)), 1)
+if tarea == "clasificacion":
+    prob_hit = float(modelo.predict_proba(datos_entrada)[:, 1][0])
+    promocionar = prob_hit >= umbral_corte
+    score_display = f"{prob_hit * 100:.1f}%"
+    score_label = "Probabilidad de Hit"
+else:
+    pred_raw = modelo.predict(datos_entrada)[0]
+    pred_clamped = round(float(np.clip(pred_raw, 0, 100)), 1)
+    promocionar = pred_clamped >= umbral_corte
+    score_display = f"{pred_clamped} / 100"
+    score_label = "Popularidad Predicha"
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -261,11 +262,15 @@ st.markdown("<br>", unsafe_allow_html=True)
 # -----------------------------------------------------------------------------
 col_res1, col_res2 = st.columns([1, 2])
 
+card_class = "prediction-card-hit" if promocionar else "prediction-card-nohit"
+estado_promo = "🚀 RECOMENDADO PROMOCIONAR" if promocionar else "⚠️ NO PROMOCIONAR"
+
 with col_res1:
     st.markdown(f"""
-    <div class="prediction-card">
-        <div class="prediction-title">Popularidad Predicha</div>
-        <div class="prediction-score">{pred_clamped} <span style="font-size:24px;">/ 100</span></div>
+    <div class="{card_class}">
+        <div class="prediction-title">{score_label}</div>
+        <div class="prediction-score">{score_display}</div>
+        <div class="prediction-sub" style="font-size:18px; font-weight:800; margin-top:8px;">{estado_promo}</div>
         <div class="prediction-sub">"{titulo_input}"</div>
         <div class="prediction-sub" style="opacity:0.85;">Artista: {artista_input} | {genero_input}</div>
     </div>
@@ -304,7 +309,7 @@ with col_res2:
     st.plotly_chart(fig_radar, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# MÓDULO DE GRÁFICAS COMPARATIVAS (Contexto del Dataset)
+# MÓDULO DE GRÁFICAS COMPARATIVAS
 # -----------------------------------------------------------------------------
 st.markdown("---")
 st.markdown("### 📈 Posicionamiento Analítico de la Canción")
@@ -314,7 +319,7 @@ if df_canciones is not None:
 
     with g_col1:
         st.markdown('<div class="studio-card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="studio-card-title">Posición Predicha ({pred_clamped} pts) en la Distribución</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="studio-card-title">Distribución Histórica de Popularidad</div>', unsafe_allow_html=True)
         
         fig_hist = px.histogram(
             df_canciones, 
@@ -323,24 +328,13 @@ if df_canciones is not None:
             color_discrete_sequence=['#320346']
         )
         
-        # Marcador de la canción evaluada
-        fig_hist.add_vline(
-            x=pred_clamped, 
-            line_dash="solid", 
-            line_color="#ff007a", 
-            line_width=4,
-            annotation_text=f" Tu Canción: {pred_clamped}",
-            annotation_position="top right",
-            annotation_font=dict(size=13, color="#ff007a")
-        )
-        
         mean_pop = df_canciones['popularidad'].mean()
         fig_hist.add_vline(
             x=mean_pop, 
             line_dash="dash", 
             line_color="#ff9e00", 
             line_width=2,
-            annotation_text=f" Media: {mean_pop:.1f}",
+            annotation_text=f" Media Histórica: {mean_pop:.1f}",
             annotation_position="top left",
             annotation_font=dict(size=12, color="#ff9e00")
         )
@@ -379,9 +373,9 @@ if df_canciones is not None:
         st.plotly_chart(fig_bar, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Gráfica 3: Dispersión y Regresión
+    # Dispersión
     st.markdown('<div class="studio-card">', unsafe_allow_html=True)
-    st.markdown(f'<div class="studio-card-title">Regresión Lineal: Bailabilidad ({bailabilidad}) vs Popularidad ({pred_clamped} pts)</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="studio-card-title">Relación: Bailabilidad ({bailabilidad}) vs Popularidad Histórica</div>', unsafe_allow_html=True)
     
     x_vals = df_canciones['bailabilidad'].values
     y_vals = df_canciones['popularidad'].values
@@ -393,7 +387,6 @@ if df_canciones is not None:
 
     fig_scatter = go.Figure()
     
-    # Dataset
     fig_scatter.add_trace(go.Scatter(
         x=x_vals, 
         y=y_vals, 
@@ -402,25 +395,12 @@ if df_canciones is not None:
         name='Canciones Dataset'
     ))
     
-    # Recta
     fig_scatter.add_trace(go.Scatter(
         x=x_line, 
         y=y_line, 
         mode='lines',
         line=dict(color='#ff5e36', width=3),
-        name=f'Tendencia Lineal (y = {b:.1f} + {m:.1f}x)'
-    ))
-    
-    # Estrella de la canción evaluada
-    fig_scatter.add_trace(go.Scatter(
-        x=[bailabilidad], 
-        y=[pred_clamped], 
-        mode='markers+text',
-        marker=dict(color='#ff007a', size=18, symbol='star', line=dict(color='#ffffff', width=2)),
-        text=[f"  <b>{titulo_input}</b> ({pred_clamped} pts)"],
-        textposition="top right",
-        textfont=dict(color='#ff007a', size=14),
-        name=f"Tu Canción: {titulo_input}"
+        name=f'Tendencia (y = {b:.1f} + {m:.1f}x)'
     ))
 
     fig_scatter.update_layout(
