@@ -14,7 +14,7 @@ Repositorio base del taller en dos sprints: regresión y clasificación binaria.
 
 ---
 
-Una disquera debe decidir, antes del lanzamiento, en qué canciones invertir promoción. Este proyecto desarrolla un servicio de predicción mediante Machine Learning, Python y FastAPI, desplegado en Render.
+Una disquera debe decidir, antes del lanzamiento, en qué canciones invertir promoción. Este proyecto desarrolla un servicio de predicción mediante Machine Learning, Python y FastAPI, desplegado en Render, y un panel interactivo en Streamlit para probar canciones sin escribir código.
 
 El servicio utiliza un único artefacto, `models/modelo.pkl`, que contiene el modelo entrenado y su ficha de información. En cada sprint se reemplaza este archivo por el modelo correspondiente, sin modificar el código de la API.
 
@@ -26,6 +26,7 @@ El servicio utiliza un único artefacto, `models/modelo.pkl`, que contiene el mo
 | Variable objetivo | `popularidad` (0–100) | `es_hit` (1 si popularidad ≥ 70) |
 | Variables excluidas | `reproducciones_sem1`, `es_hit` | `reproducciones_sem1`, `popularidad` |
 | Modelo de referencia | Regresión lineal con duración² | Regresión logística |
+| Modelo desarrollado | HistGradientBoostingRegressor + características derivadas |	HistGradientBoostingClassifier + umbral de costo mínimo|
 | Métrica principal | MAE | Costo de clasificación |
 | Línea base de referencia | MAE 10,44 | Costo 318 |
 | Resultado de referencia | MAE 5,75 | Costo 99 |
@@ -50,6 +51,19 @@ Se desarrolló y desplegó un modelo propio basado en `HistGradientBoostingRegre
 | Sesgo medio | 1,76 |
 
 El modelo obtuvo un MAE de 6,61, inferior al 10,44 de la línea base, lo que representa una reducción aproximada del 36,7 % en el error absoluto medio. El coeficiente R² de 0,616 indica que el modelo explica una parte importante de la variabilidad de la popularidad en el conjunto evaluado.
+
+## Resultados del Sprint 2: clasificación y estrategia de promoción
+
+El segundo sprint reemplaza el modelo de regresión por un clasificador que estima la probabilidad de que una canción sea un hit (es_hit = 1 si la popularidad alcanza o supera los 70 puntos). Con ello el proyecto pasa de estimar un puntaje a apoyar una decisión de negocio: promocionar o no una canción antes de su lanzamiento.
+
+# Lógica de costos
+
+Los dos errores de clasificación tienen consecuencias económicas distintas:
+
+- Falso positivo (FP): se promociona una canción que no se convierte en éxito. Se pierde la inversión publicitaria inicial (costo = 1).
+- Falso negativo (FN): no se promociona una canción que tenía potencial de éxito. Se pierde el ingreso por reproducciones, regalías y licencias (costo = 3).
+
+El costo total se calcula como Costo = 1 × FP + 3 × FN. Como perder un éxito cuesta el triple que una campaña fallida, el modelo no maximiza la exactitud, sino que minimiza el costo total sobre la partición de prueba temporal (2020–2025). La línea base consiste en no promocionar ninguna canción: pierde los 106 éxitos de la prueba, con un costo de 106 × 3 = 318. Los costos los fija quien responde por el presupuesto, no el modelo.
 
 La regla de decisión establece recomendar la promoción cuando la popularidad esperada supera los 65 puntos.
 
