@@ -56,7 +56,7 @@ El modelo obtuvo un MAE de 6,61, inferior al 10,44 de la línea base, lo que rep
 
 El segundo sprint reemplaza el modelo de regresión por un clasificador que estima la probabilidad de que una canción sea un hit (es_hit = 1 si la popularidad alcanza o supera los 70 puntos). Con ello el proyecto pasa de estimar un puntaje a apoyar una decisión de negocio: promocionar o no una canción antes de su lanzamiento.
 
-# Lógica de costos
+## Lógica de costos
 
 Los dos errores de clasificación tienen consecuencias económicas distintas:
 
@@ -64,6 +64,34 @@ Los dos errores de clasificación tienen consecuencias económicas distintas:
 - Falso negativo (FN): no se promociona una canción que tenía potencial de éxito. Se pierde el ingreso por reproducciones, regalías y licencias (costo = 3).
 
 El costo total se calcula como Costo = 1 × FP + 3 × FN. Como perder un éxito cuesta el triple que una campaña fallida, el modelo no maximiza la exactitud, sino que minimiza el costo total sobre la partición de prueba temporal (2020–2025). La línea base consiste en no promocionar ninguna canción: pierde los 106 éxitos de la prueba, con un costo de 106 × 3 = 318. Los costos los fija quien responde por el presupuesto, no el modelo.
+
+## Modelo y umbral de decisión
+Se entrenó un HistGradientBoostingClassifier respetando la estructura temporal de los datos (TimeSeriesSplit sobre 1995–2019) para evitar fuga de información. La regla de decisión es:
+
+Promocionar si la probabilidad de hit estimada es ≥ 0,15.
+
+Como referencia, con probabilidades perfectamente calibradas y costos 1 y 3, el umbral teórico sería 1 / (1 + 3) = 0,25. El umbral de 0,15 hace al sistema más propenso a promocionar: prioriza la cobertura de éxitos a costa de la precisión.
+
+## Desempeño en la prueba temporal (2020–2025)
+| Métrica	| Línea base (nunca promocionar) |	Modelo Sprint 2|
+| Costo financiero total|	318 |	107 |
+|Sensibilidad (recall) |	0,0 %  |	86,8 % |
+| Precisión comercial |	No aplica |	58,6 % |
+| Umbral de decisión |	No aplica |	0,15 |
+
+El modelo reduce el costo total en un 66,3 % y capta 92 de los 106 éxitos reales.
+
+|	| Se promociona	| No se promociona |
+| Fue hit	| TP = 92	| FN = 14 (costo 14 × 3 = 42)|
+| No fue hit |	FP = 65 (costo 65 × 1 = 65)	| TN = 244|
+
+Costo total del modelo: 65 + 42 = 107.
+
+## Limitaciones
+- Los datos son sintéticos y el modelo describe asociaciones, no relaciones causales.
+- El umbral de 0,15 es óptimo para costos de 1 (FP) y 3 (FN); si los costos cambian, el umbral debe recalcularse.
+- El desempeño se mide sobre una sola partición temporal de 415 canciones. En ese periodo la proporción de éxitos (25,5 %) es mayor que en el de entrenamiento (19,2 %).
+- El resultado de referencia del taller es un costo de 99 con regresión logística; el modelo del equipo obtiene 107. Ambos reducen de forma sustancial el costo de la línea base de 318.
 
 La regla de decisión establece recomendar la promoción cuando la popularidad esperada supera los 65 puntos.
 
